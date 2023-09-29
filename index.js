@@ -187,10 +187,10 @@ server.on('login', async function (client) {
 
             if (meta.name == 'keep_alive') {
                 console.log('keep from real-srv', data)
-                targetClient.write("keep_alive", {
-                    // keepAliveId: Math.floor(Math.random() * 2147483648),
-                    keepAliveId: data.keepAliveId,
-                });
+                // targetClient.write("keep_alive", {
+                //     // keepAliveId: Math.floor(Math.random() * 2147483648),
+                //     keepAliveId: data.keepAliveId,
+                // });
             }
             
             client.write(meta.name, data);
