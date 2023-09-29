@@ -168,13 +168,13 @@ server.on('login', async function (client) {
         // console.log(meta.state, targetClient.state);
         // if (targetClient.state == states.PLAY && meta.state == states.PLAY) {
             // code
-            console.log('Client -> This : ' + meta.name);
-            // if (meta.name == 'keep_alive') {
-            //     console.log('keep', data)
+            // console.log('Client -> This : ' + meta.name);
+            if (meta.name == 'keep_alive') {
+                console.log('keep from client', data)
             //     client.write("keep_alive", {
             //         keepAliveId: meta
             //     });
-            // }
+            }
             targetClient.write(meta.name, data);
         // }
       });
@@ -186,7 +186,7 @@ server.on('login', async function (client) {
             // console.log('Real-Server -> This : ' + meta.name);
 
             if (meta.name == 'keep_alive') {
-                console.log('keep', data)
+                console.log('keep from real-srv', data)
             //     targetClient.write("keep_alive", {
             //         keepAliveId: Math.floor(Math.random() * 2147483648),
             //     });
@@ -267,6 +267,6 @@ function handleEnd(client, targetClient, id) {
             await ptero.stopServer(id).catch(e => { console.log('ptero', e); });
             delete servers[id];
         }
-    }, 1 * 1000 * 60);
+    }, 5 * 1000 * 60);
 
 }
