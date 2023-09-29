@@ -1,0 +1,16 @@
+{
+  "name": "offlinemc",
+  "version": "1.0.0",
+  "description": "Automatic server start and stop",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "minecraft-data": "^3.46.1",
+    "minecraft-protocol": "^1.44.0"
+  }
+}
