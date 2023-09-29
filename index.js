@@ -5,6 +5,11 @@ require('dotenv').config();
 const Nodeactyl = require('nodeactyl');
 const ptero = new Nodeactyl.NodeactylClient(process.env.URL, process.env.KEY);
 
+var servers;
+servers = {};
+
+const states = mc.states
+
 console.clear();
 
 var c = '§';
@@ -18,6 +23,15 @@ const options = {
 
     beforeLogin: (client) => {
        // console.log('log', client.username, client.serverHost, client.serverPort)
+
+       var host = String(client.serverHost);
+
+       if (host.endsWith('s.meegie.net') == false) {
+        return client.end('§cNo server found at ' +c +'e' + host);
+       }
+
+       var id = String(host).replace(`.s.meegie.net`, '');
+
         return client;
     },
     beforePing: (response, client) => {
@@ -63,11 +77,16 @@ const options = {
 
             console.log('o', id, host);
 
-        var status = ptero.getServerDetails(id).then(r => { console.log('r', r) }).catch((e) => {console.log(e)});
-        
-        console.log('s', status);
+        // ptero.startServer(id).then(r => { console.log('start', r); }).catch((e) => {console.log(e)});
 
-        response.description.text = `${c}c${id} ${c}7is currently ${c}aOnline`;
+        if (servers[id]) {
+            if (server.status == 'starting') {
+                response.description.text = `${c}c${id} ${c}7is currently ${c}estarting\n${c}7${c}a${c}lPlease wait`;
+            }
+        } else {
+            response.description.text = `${c}c${id} ${c}7is currently ${c}cOffline\n${c}7${c}a${c}lJoin to start`;
+        }
+        
         }
 
         return response;
@@ -83,7 +102,118 @@ const mcData = require('minecraft-data')('1.18.2');
 
 console.log('Server is online')
 
-server.on('login', function (client) {
-    console.log('join', client.username, client.serverHost, client.serverPort);
-    client.end(`${c}6${c}lServer is now ${c}astarting\n${c}7Server: ${client.serverHost}`);
+server.on('login', async function (client) {
+
+
+    var host = String(client.serverHost);
+
+       if (host.endsWith('s.meegie.net') == false) {
+        return client.end('§cNo server found at ' +c +'e' + host);
+       }
+
+       var id = String(host).replace(`.s.meegie.net`, '');
+
+       if (!servers[id]) {
+        await ptero.startServer(id);
+        servers[id] = {
+            players: 0,
+            lastPlayer: Date.now()
+        };
+       }
+
+       var data = await ptero.getServerDetails(id);
+
+       var mainP;
+       var mainI;
+       var allos = data.relationships.allocations.data;
+    //    console.log('d', allos);
+
+       for (let i = 0; i < allos.length; i++) {
+
+        var alloData = allos[i].attributes;
+        if (alloData.is_default == true) {
+            mainP = alloData.port;
+            mainI = alloData.ip_alias;
+        }
+
+       }
+
+    const targetClient = mc.createClient({
+        host: mainI,
+        port: mainP,
+        username: client.username,
+        keepAlive: false,
+        version: client.version
+      });
+
+      servers[id].players = servers[id].players + 1;
+      console.log(`Now ${servers[id].players} players`);
+
+      client.on('packet', (data, meta) => {
+        if (targetClient.state === states.PLAY && meta.state === states.PLAY) {
+            // code
+            console.log('Server -> Client : ' + meta.name);
+            targetClient.write(meta.name, data);
+        }
+      });
+      targetClient.on('packet', (data, meta) => {
+        if (meta.state === states.PLAY && client.state === states.PLAY) {
+
+            // code
+            console.log('Client -> Server : ' + meta.name);
+            client.write(meta.name, data);
+
+        }
+      });
+
+      var hasError;
+      hasError = false;
+
+      var isEnd;
+      isEnd = false;
+      client.on('end', () => {
+        targetClient.end();
+        if (isEnd == false) servers[id].players = servers[id].players - 1;
+        isEnd = true;
+
+        console.log('Client left. ' + servers[id].players);
+
+        if (hasError == false) handleEnd(client, targetClient, id);
+      });
+      targetClient.on('end', () => {
+        client.end();
+        if (isEnd == false) servers[id].players = servers[id].players - 1;
+        isEnd = true;
+        console.log('Server left. ' + servers[id].players);
+
+        if (hasError == false) handleEnd(client, targetClient, id);
+      });
+
+      client.on('error', (e) => {
+        // hasError = true;
+        console.log('err', String(e));
+      })
+      targetClient.on('error', (e) => {
+        // hasError = true;
+        console.log('err', String(e));
+      })
+
+
+    // console.log('join', client.username, client.serverHost, client.serverPort);
+    // client.end(`${c}6${c}lServer is now ${c}astarting\n${c}7Server: ${client.serverHost}\n\n${mainI}:${mainP}`);
 });
+
+function handleEnd(client, targetClient, id) {
+
+    var dn = Date.now();
+    servers[id].lastPlayer = dn;
+
+    setTimeout(async () => {
+        if (servers[id].lastPlayer == dn && servers[id].players == 0) {
+            console.log('all players left. Stopping...');
+            await ptero.stopServer(id);
+            delete servers[id];
+        }
+    }, 0.5 * 1000 * 60);
+
+}
