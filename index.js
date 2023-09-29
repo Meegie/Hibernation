@@ -139,22 +139,39 @@ server.on('login', async function (client) {
 
        }
 
+       mainI = '192.168.1.175';
+       mainP = 25565;
+
     const targetClient = mc.createClient({
         host: mainI,
         port: mainP,
         username: client.username,
-        keepAlive: true,
-        version: client.version
+        keepAlive: false,
+        noPongTimeout: 15*1000,
+        skipValidation: true
       });
 
       servers[id].players = servers[id].players + 1;
-      console.log(`Now ${servers[id].players} players`);
+      console.log(`Now ${servers[id].players} players ${mainI}:${mainP}`);
+
+      client.on('disconnect', function (packet) {
+        console.log('client disconnected: ' + packet.reason)
+      })
+      targetClient.on('disconnect', function (packet) {
+        console.log('target disconnected: ' + packet.reason)
+      })
 
       client.on('packet', (data, meta) => {
         // console.log(meta.state, targetClient.state);
         // if (targetClient.state == states.PLAY && meta.state == states.PLAY) {
             // code
-            // console.log('Client -> Server : ' + meta.name);
+            console.log('Client -> Server : ' + meta.name);
+            if (meta.name == 'keep_alive') {
+                console.log('keep', data)
+                client.write("keep_alive", {
+                    keepAliveId: meta
+                });
+            }
             targetClient.write(meta.name, data);
         // }
       });
@@ -164,7 +181,18 @@ server.on('login', async function (client) {
 
             // code
             // console.log('Server -> Client : ' + meta.name);
+
+            if (meta.name == 'keep_alive') {
+                console.log('keep', data)
+                targetClient.write("keep_alive", {
+                    keepAliveId: Math.floor(Math.random() * 2147483648),
+                });
+            }
+            
             client.write(meta.name, data);
+            if (meta.name === 'set_compression') {
+                client.compressionThreshold = data.threshold
+              } // Set compression
 
         // }
       });
@@ -174,24 +202,24 @@ server.on('login', async function (client) {
 
       var isEnd;
       isEnd = false;
-      client.on('end', () => {
+      client.on('end', (r) => {
         targetClient.end('Client closed connection');
         if (isEnd == false && servers[id] != undefined) servers[id].players = servers[id].players - 1;
         isEnd = true;
 
 
         if (servers[id] == undefined) return;
-        console.log('Client left. ' + servers[id].players);
+        console.log('Client left. ' + servers[id].players, r);
 
         if (hasError == false) handleEnd(client, targetClient, id);
       });
-      targetClient.on('end', () => {
-        client.end('Server closed connection');
+      targetClient.on('end', (r) => {
+        client.end('Server closed connection: ' + String(r));
         if (isEnd == false && servers[id] != undefined) servers[id].players = servers[id].players - 1;
         isEnd = true;
 
         if (servers[id] == undefined) return;
-        console.log('Server left. ' + servers[id].players);
+        console.log('Server left. ' + servers[id].players, r);
 
         if (hasError == false) {
             servers[id].status = 'online';
@@ -204,7 +232,7 @@ server.on('login', async function (client) {
       client.on('error', (e) => {
         // hasError = true;
         targetClient.end(`The client had an error: ${String(e)}`);
-        console.log('err(s)', String(e));
+        console.log('err(c->s)', String(e));
       })
       targetClient.on('error', (e) => {
         // hasError = true;
@@ -213,7 +241,7 @@ server.on('login', async function (client) {
             console.log('Server crashed. Removing server...');
             delete servers[id];
         }
-        console.log('err(c)', String(e));
+        console.log('err(s->this)', String(e));
       })
 
 
@@ -229,12 +257,13 @@ function handleEnd(client, targetClient, id) {
     servers[id].lastPlayer = dn;
 
     setTimeout(async () => {
-        if (servers[id] == undefined) return;
+        console.log('5 minutes', dn, servers[id].lastPlayer)
+        if (servers[id] == undefined) return console.log('> Server is already off');
         if (servers[id].lastPlayer == dn && servers[id].players == 0) {
-            console.log('all players left. Stopping...');
+            console.log('>>> all players left. Stopping...');
             await ptero.stopServer(id).catch(e => { console.log('ptero', e); });
             delete servers[id];
         }
-    }, 5 * 1000 * 60);
+    }, 1 * 1000 * 60);
 
 }
