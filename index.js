@@ -183,7 +183,7 @@ server.on('login', async function (client) {
         // if (meta.state == states.PLAY && client.state == states.PLAY) {
 
             // code
-            console.log('Real-Server -> This : ' + meta.name);
+            // console.log('Real-Server -> This : ' + meta.name);
 
             if (meta.name == 'keep_alive') {
                 console.log('keep from real-srv', data)
