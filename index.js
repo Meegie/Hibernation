@@ -80,11 +80,11 @@ const options = {
         // ptero.startServer(id).then(r => { console.log('start', r); }).catch((e) => {console.log(e)});
 
         if (servers[id]) {
-            if (server.status == 'starting') {
+            if (servers[id].status == 'starting') {
                 response.description.text = `${c}c${id} ${c}7is currently ${c}estarting\n${c}7${c}a${c}lPlease wait`;
             }
         } else {
-            response.description.text = `${c}c${id} ${c}7is currently ${c}cOffline\n${c}7${c}a${c}lJoin to start`;
+            response.description.text = `${c}c${id} ${c}7is currently ${c}cOffline ${c}7or ${c}aStarting\n${c}7${c}a${c}lJoin to start`;
         }
         
         }
@@ -114,14 +114,15 @@ server.on('login', async function (client) {
        var id = String(host).replace(`.s.meegie.net`, '');
 
        if (!servers[id]) {
-        await ptero.startServer(id);
+        await ptero.startServer(id).catch(e => { console.log('ptero', e); });
         servers[id] = {
             players: 0,
-            lastPlayer: Date.now()
+            lastPlayer: Date.now(),
+            status: 'starting'
         };
        }
 
-       var data = await ptero.getServerDetails(id);
+       var data = await ptero.getServerDetails(id).catch(e => { console.log('ptero', e); });
 
        var mainP;
        var mainI;
@@ -142,7 +143,7 @@ server.on('login', async function (client) {
         host: mainI,
         port: mainP,
         username: client.username,
-        keepAlive: false,
+        keepAlive: true,
         version: client.version
       });
 
@@ -150,20 +151,22 @@ server.on('login', async function (client) {
       console.log(`Now ${servers[id].players} players`);
 
       client.on('packet', (data, meta) => {
-        if (targetClient.state === states.PLAY && meta.state === states.PLAY) {
-            // code
-            console.log('Server -> Client : ' + meta.name);
-            targetClient.write(meta.name, data);
-        }
-      });
-      targetClient.on('packet', (data, meta) => {
-        if (meta.state === states.PLAY && client.state === states.PLAY) {
-
+        // console.log(meta.state, targetClient.state);
+        // if (targetClient.state == states.PLAY && meta.state == states.PLAY) {
             // code
             console.log('Client -> Server : ' + meta.name);
+            targetClient.write(meta.name, data);
+        // }
+      });
+      targetClient.on('packet', (data, meta) => {
+        // console.log(meta.state, client.state);
+        // if (meta.state == states.PLAY && client.state == states.PLAY) {
+
+            // code
+            console.log('Server -> Client : ' + meta.name);
             client.write(meta.name, data);
 
-        }
+        // }
       });
 
       var hasError;
@@ -172,30 +175,45 @@ server.on('login', async function (client) {
       var isEnd;
       isEnd = false;
       client.on('end', () => {
-        targetClient.end();
-        if (isEnd == false) servers[id].players = servers[id].players - 1;
+        targetClient.end('Client closed connection');
+        if (isEnd == false && servers[id] != undefined) servers[id].players = servers[id].players - 1;
         isEnd = true;
 
+
+        if (servers[id] == undefined) return;
         console.log('Client left. ' + servers[id].players);
 
         if (hasError == false) handleEnd(client, targetClient, id);
       });
       targetClient.on('end', () => {
-        client.end();
-        if (isEnd == false) servers[id].players = servers[id].players - 1;
+        client.end('Server closed connection');
+        if (isEnd == false && servers[id] != undefined) servers[id].players = servers[id].players - 1;
         isEnd = true;
+
+        if (servers[id] == undefined) return;
         console.log('Server left. ' + servers[id].players);
+
+        if (hasError == false) {
+            servers[id].status = 'online';
+            console.log('Server is online!')
+        }
 
         if (hasError == false) handleEnd(client, targetClient, id);
       });
 
       client.on('error', (e) => {
         // hasError = true;
-        console.log('err', String(e));
+        targetClient.end(`The client had an error: ${String(e)}`);
+        console.log('err(s)', String(e));
       })
       targetClient.on('error', (e) => {
         // hasError = true;
-        console.log('err', String(e));
+        client.end(`${c}7Server ${c}c${id} ${c}7is still starting. Re-join to try again.\n\n${c}ePowered by ${c}aMeegieGame`);
+        if (String(e).includes('ECONNREFUSED')) {
+            console.log('Server crashed. Removing server...');
+            delete servers[id];
+        }
+        console.log('err(c)', String(e));
       })
 
 
@@ -209,11 +227,12 @@ function handleEnd(client, targetClient, id) {
     servers[id].lastPlayer = dn;
 
     setTimeout(async () => {
+        if (servers[id] == undefined) return;
         if (servers[id].lastPlayer == dn && servers[id].players == 0) {
             console.log('all players left. Stopping...');
-            await ptero.stopServer(id);
+            await ptero.stopServer(id).catch(e => { console.log('ptero', e); });
             delete servers[id];
         }
-    }, 0.5 * 1000 * 60);
+    }, 5 * 1000 * 60);
 
 }
