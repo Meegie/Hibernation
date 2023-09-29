@@ -141,8 +141,8 @@ server.on('login', async function (client) {
 
        }
 
-       mainI = '192.168.1.175';
-       mainP = 25565;
+    //    mainI = '192.168.1.175';
+    //    mainP = 25565;
 
     const targetClient = mc.createClient({
         host: mainI,
