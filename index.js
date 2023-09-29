@@ -41,7 +41,7 @@ const options = {
             name: 'Meegie',
             protocol: client.version
         };
-        response.description.text = '§6§lServer is §astarting\nAt §7' + client.serverHost + ':' + client.serverPort;
+        response.description.text = '§6§lServer by MeegieGame';
         response.players = {
             max: 0,
             online: 0,
@@ -80,9 +80,9 @@ const options = {
         // ptero.startServer(id).then(r => { console.log('start', r); }).catch((e) => {console.log(e)});
 
         if (servers[id]) {
-            if (servers[id].status == 'starting') {
-                response.description.text = `${c}c${id} ${c}7is currently ${c}estarting\n${c}7${c}a${c}lPlease wait`;
-            }
+            // if (servers[id].status == 'starting') {
+                response.description.text = `${c}c${id} ${c}7is currently ${c}aOnline`;
+            // }
         } else {
             response.description.text = `${c}c${id} ${c}7is currently ${c}cOffline ${c}7or ${c}aStarting\n${c}7${c}a${c}lJoin to start`;
         }
@@ -222,6 +222,8 @@ server.on('login', async function (client) {
 });
 
 function handleEnd(client, targetClient, id) {
+
+    console.log('> Handling player leave...');
 
     var dn = Date.now();
     servers[id].lastPlayer = dn;
