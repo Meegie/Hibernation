@@ -154,7 +154,7 @@ server.on('login', async function (client) {
         // console.log(meta.state, targetClient.state);
         // if (targetClient.state == states.PLAY && meta.state == states.PLAY) {
             // code
-            console.log('Client -> Server : ' + meta.name);
+            // console.log('Client -> Server : ' + meta.name);
             targetClient.write(meta.name, data);
         // }
       });
@@ -163,7 +163,7 @@ server.on('login', async function (client) {
         // if (meta.state == states.PLAY && client.state == states.PLAY) {
 
             // code
-            console.log('Server -> Client : ' + meta.name);
+            // console.log('Server -> Client : ' + meta.name);
             client.write(meta.name, data);
 
         // }
