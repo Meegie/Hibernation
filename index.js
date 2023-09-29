@@ -1,5 +1,10 @@
 const mc = require('minecraft-protocol');
 
+require('dotenv').config();
+
+const Nodeactyl = require('nodeactyl');
+const ptero = new Nodeactyl.NodeactylClient(process.env.URL, process.env.KEY);
+
 console.clear();
 
 var c = '§';
@@ -44,19 +49,26 @@ const options = {
 
         var host = client.serverHost;
         host = String(host);
-        if (!host.endsWith('s.meegie.net')) {
-            response.description.text = '§4No server found at ' + client.serverHost;
-        }
+        if (host.endsWith('s.meegie.net') == false) {
+            response.description.text = '§cNo server found at ' +c +'e' + client.serverHost;
+        } else {
 
-        var id = String(host).replace(`s.meegie.net`);
+        var id = String(host).replace(`.s.meegie.net`, '');
 
         response.players.sample.push(
             {
                 name: `${c}7Server id: ${c}c${id}`,
                 id: '4566e69f-c907-48ee-8d71-d7ba5aa00d23'
             });
+
+            console.log('o', id, host);
+
+        var status = ptero.getServerDetails(id).then(r => { console.log('r', r) }).catch((e) => {console.log(e)});
         
+        console.log('s', status);
+
         response.description.text = `${c}c${id} ${c}7is currently ${c}aOnline`;
+        }
 
         return response;
     },
