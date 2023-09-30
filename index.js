@@ -1,16 +1,18 @@
+console.clear();
 const mc = require('minecraft-protocol');
 
 require('dotenv').config();
 
 const Nodeactyl = require('nodeactyl');
+
+console.log('Connecting to ' + process.env.URL)
+
 const ptero = new Nodeactyl.NodeactylClient(process.env.URL, process.env.KEY);
 
 var servers;
 servers = {};
 
 const states = mc.states
-
-console.clear();
 
 var c = '§';
 
@@ -128,6 +130,7 @@ server.on('login', async function (client) {
 
        var mainP;
        var mainI;
+       if (!data) return client.end(`${c}cThis server does not exists.\n\n${c}7Powered by ${c}a${c}lMeegieGame`);
        var allos = data.relationships.allocations.data;
     //    console.log('d', allos);
 
@@ -149,9 +152,9 @@ server.on('login', async function (client) {
         port: mainP,
         username: client.username,
         keepAlive: false,
-        noPongTimeout: 1*1000,
+        // noPongTimeout: 1*1000,
         skipValidation: true,
-        version: '1.19.4'
+        version: client.version
       });
 
       servers[id].players = servers[id].players + 1;
